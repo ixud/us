@@ -1,0 +1,315 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+
+#tokencal-panel {
+  position: fixed; top: 76px; right: 24px; z-index: 2147483000;
+  background: rgba(24,24,27,.95); backdrop-filter: blur(12px);
+  color: #f3f4f6; border: 1px solid rgba(255,255,255,.15); border-radius: 12px;
+  padding: 10px 14px; width: 460px; max-width: 94vw; box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px; box-shadow: 0 10px 30px rgba(0,0,0,.4); user-select: none;
+}
+#tokencal-panel.hidden { display: none !important; }
+#tokencal-panel .tk-header { display: flex; justify-content: space-between; align-items: center; cursor: grab; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,.1); margin-bottom: 8px; touch-action: none; }
+#tokencal-panel .tk-header > div:last-child { flex: 0 0 auto; white-space: nowrap; }
+#tokencal-panel .tk-header:active { cursor: grabbing; }
+#tokencal-panel .tk-title { font-weight: 700; display: flex; align-items: center; gap: 6px; min-width: 0; }
+#tokencal-panel:not(.collapsed) .tk-title { flex: 1; }
+#tokencal-panel .tk-chatname { font-size: 10px; color: #9ca3af; font-family: monospace; white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
+#tokencal-panel .tk-icon { background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 12px; padding: 2px 5px; border-radius: 4px; }
+#tokencal-panel .tk-icon:hover { color: #fff; background: rgba(255,255,255,.1); }
+#tokencal-panel .tk-status { font-size: 11px; color: #9ca3af; margin-bottom: 8px; min-height: 14px; line-height: 1.3; word-break: break-word; }
+#tokencal-panel .tk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+#tokencal-panel .tk-cell { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); border-radius: 8px; padding: 5px 8px; }
+#tokencal-panel .tk-label { font-size: 10px; text-transform: uppercase; color: #9ca3af; font-weight: 600; }
+#tokencal-panel .tk-val { font-size: 14px; font-weight: 700; font-family: monospace; color: #e5e7eb; }
+#tokencal-panel .tk-in { color: #22d3ee; text-shadow: 0 0 6px rgba(34,211,238,.35); }
+#tokencal-panel .tk-out { color: #34d399; }
+#tokencal-panel .tk-total { color: #c084fc; }
+#tokencal-panel .tk-meta { font-size: 10px; color: #9ca3af; margin-bottom: 8px; line-height: 1.4; word-break: break-word; }
+#tokencal-panel .tk-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+#tokencal-panel .tk-row:last-child { margin-bottom: 0; }
+#tokencal-panel .tk-opt { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #d1d5db; }
+#tokencal-panel select { background: #27272a; color: #e5e7eb; border: 1px solid #3f3f46; border-radius: 6px; font-size: 11px; padding: 2px 4px; }
+#tokencal-panel .tk-btnrow { display: flex; gap: 5px; margin-top: 6px; flex-wrap: wrap; }
+#tokencal-panel .tk-btn { flex: 1; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); color: #f3f4f6; padding: 6px 6px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 500; }
+#tokencal-panel .tk-btn:hover { background: rgba(255,255,255,.18); }
+#tokencal-panel .tk-btn.tk-primary { background: #d97757; border-color: #ea580c; }
+#tokencal-panel .tk-btn.tk-primary:hover { background: #e38668; }
+#tokencal-panel.collapsed .tk-body { display: none; }
+#tokencal-panel.collapsed { min-width: auto; width: auto; padding: 6px 12px; }
+#tokencal-panel.collapsed .tk-header { margin-bottom: 0; padding-bottom: 0; border: none; justify-content: flex-start; }
+.tk-overlay { position: fixed; inset: 0; z-index: 2147483001; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; }
+.tk-modal { background: #18181b; color: #e5e7eb; border: 1px solid #3f3f46; border-radius: 12px; padding: 16px; width: min(560px, 92vw); max-height: 84vh; overflow: auto; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 13px; box-shadow: 0 18px 50px rgba(0,0,0,.6); }
+.tk-modal h3 { margin: 0 0 10px; font-size: 14px; }
+.tk-modal table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+.tk-modal th, .tk-modal td { text-align: left; padding: 4px 6px; border-bottom: 1px solid #27272a; font-size: 12px; }
+.tk-modal th { color: #9ca3af; font-weight: 600; }
+.tk-modal .tk-diff-up { color: #f87171; }
+.tk-modal .tk-diff-down { color: #34d399; }
+.tk-modal .tk-diff-zero { color: #9ca3af; }
+.tk-modal .tk-actions { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+.tk-modal .tk-actions .tk-spacer { flex: 1; }
+.tk-modal button.tk-btn { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); color: #f3f4f6; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+.tk-modal button.tk-btn:hover { background: rgba(255,255,255,.18); }
+.tk-modal button.tk-btn.tk-primary { background: #d97757; border-color: #ea580c; }
+.tk-modal input[type=text] { width: 100%; box-sizing: border-box; background: #27272a; border: 1px solid #3f3f46; color: #e5e7eb; border-radius: 6px; padding: 6px 8px; font-size: 13px; margin: 6px 0 12px; }
+.tk-ckpt-item { border: 1px solid #27272a; border-radius: 8px; padding: 8px; margin-bottom: 6px; }
+.tk-ckpt-item .tk-ckpt-name { font-weight: 600; }
+.tk-ckpt-item .tk-ckpt-meta { font-size: 11px; color: #9ca3af; margin: 3px 0 6px; }
+.tk-ckpt-item .tk-ckpt-vals { font-family: monospace; font-size: 11px; margin-bottom: 6px; }
+.tk-ckpt-item .tk-ckpt-btns { display: flex; gap: 6px; }
+#tk-toasts { position: fixed; left: 50%; transform: translateX(-50%); bottom: 180px; z-index: 2147483002; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+#tk-strip { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 3px 6px 1px; margin: 0 0 2px; font-family: var(--font-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif); font-size: 10px; line-height: 1.5; color: hsl(var(--text-500, 220 9% 46%)); cursor: pointer; user-select: none; }
+#tk-strip:hover { color: hsl(var(--text-100, 60 2% 23%)); }
+#tk-strip .tk-strip-num { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+#tk-strip .tk-strip-sep { opacity: .55; }
+#tk-strip .tk-strip-dot { width: 7px; height: 7px; border-radius: 50%; background: #9ca3af; display: inline-block; }
+#tk-strip .tk-strip-dot.online { background: #34d399; }
+#tk-strip .tk-strip-dot.offline { background: #f87171; }
+#tk-strip .tk-strip-expand { opacity: .7; margin-left: 2px; }
+#tk-strip .tk-strip-out { display: inline-flex; align-items: center; }
+.tk-out-num { color: #34d399; font-weight: 700; }
+.tk-in-num { color: #22d3ee; font-weight: 700; text-shadow: 0 0 6px rgba(34,211,238,.5); }
+.tk-total-num { color: #c084fc; }
+.tk-turns-num { color: #e5e7eb; font-weight: 600; }
+.tk-out-dot { width: 7px; height: 7px; border-radius: 50%; background: #34d399; display: inline-block; margin-right: 4px; box-shadow: 0 0 6px rgba(52,211,153,.75); animation: tk-out-pulse 1.6s ease-in-out infinite; }
+@keyframes tk-out-pulse { 0%, 100% { opacity: .35; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.15); } }
+@media (prefers-reduced-motion: reduce) { .tk-out-dot { animation: none; } }
+#tokencal-panel .tk-mini-stats { display: none; font-size: 11px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #9ca3af; align-items: center; gap: 4px; white-space: nowrap; }
+#tokencal-panel.collapsed .tk-mini-stats { display: inline-flex; margin-left: 2.2em; margin-right: auto; }
+#tokencal-panel.collapsed .tk-chatname { display: none; }
+#tokencal-panel.tk-embedded { position: static !important; left: auto !important; top: auto !important; right: auto !important; width: 100%; box-sizing: border-box; min-width: 0; max-width: none; margin: 4px 0 6px; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
+#tokencal-panel.tk-embedded .tk-header { cursor: default; }
+.tk-toast { background: #18181b; color: #e5e7eb; border: 1px solid #3f3f46; border-left: 3px solid #d97757; border-radius: 8px; padding: 10px 12px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 12px; max-width: 360px; box-shadow: 0 8px 24px rgba(0,0,0,.5); opacity: 1; transition: opacity .35s; }
+.tk-toast.tk-toast-out { opacity: 0; }
+body { background:#2b2b28; margin:0; padding:16px; font-family:sans-serif; }
+.pv-wrap { display:flex; flex-wrap:wrap; gap:28px; align-items:flex-start; max-width: 1900px; }
+.pv-title { font:600 13px sans-serif; margin-bottom:6px; color:#ddd; }
+.pv-title + div { }
+#tokencal-panel { position: static !important; left:auto !important; top:auto !important; right:auto !important; }
+.pv-composer { width: 720px; border:2px dashed #777; border-radius:12px; padding:10px; background:#3a3a36; }
+.pv-inputmock { border:1px solid #666; border-radius:8px; padding:10px; color:#aaa; font:13px sans-serif; margin-top:8px; }
+</style></head>
+<body>
+<div class="pv-wrap">
+  <div class="pv-col">
+    <div class="pv-title">1) Floating EXPANDED</div>
+    <div id="tokencal-panel">
+      <div class="tk-header" id="tk-drag">
+        <div class="tk-title"><span>📊 TokenCal</span><span class="tk-chatname" id="tk-chat-title">ทดสอบชื่อแชทยาวมากๆ ระบบตรวจสอบโทเคน เวอร์ชันล่าสุด Long Chat Title Test</span></div>
+        <span class="tk-mini-stats" id="tk-mini-stats"><span class="tk-in-num">In 1,105,579</span> · <span class="tk-out-dot"></span><span class="tk-out-num">Out 977,123</span> · <span class="tk-total-num">Σ 2,082,702</span> · <span class="tk-turns-num">342 turns</span></span>
+        <div>
+          <button class="tk-icon" id="tk-btn-collapse" title="ย่อ/ขยาย">▼</button>
+          <button class="tk-icon" id="tk-btn-hide" title="ซ่อน (Ctrl+Shift+F)">✕</button>
+        </div>
+      </div>
+      <div class="tk-body">
+        <div class="tk-status" id="tk-status">อัปเดตแล้ว (API)</div>
+        <div class="tk-grid">
+          <div class="tk-cell"><div class="tk-label">Input</div><div class="tk-val tk-in" id="tk-in">1,105,579</div></div>
+          <div class="tk-cell"><div class="tk-label">Output</div><div class="tk-val tk-out" id="tk-out">977,123</div></div>
+          <div class="tk-cell"><div class="tk-label">Total</div><div class="tk-val tk-total" id="tk-total">2,082,702</div></div>
+          <div class="tk-cell"><div class="tk-label">Messages</div><div class="tk-val" id="tk-msgs">342</div></div>
+        </div>
+        <div class="tk-meta" id="tk-meta">Model: claude-sonnet-4-6 · Tokenizer: v3.0 · ที่มา: API · อัปเดต: 12/10/2026 18:45:12</div>
+        <div class="tk-row">
+          <label class="tk-opt">Tok:
+            <select id="tk-gen">
+              <option value="auto">Auto</option>
+              <option value="3.0">v3 (≤4.6)</option>
+              <option value="4.7">v4.7 (Opus 4.7)</option>
+              <option value="4.8">v4.8 (4.8+/Sonnet 5)</option>
+            </select>
+          </label>
+          <label class="tk-opt"><input type="checkbox" id="tk-think"> thinking/tool</label>
+          <label class="tk-opt"><input type="checkbox" id="tk-auto"> Auto</label>
+          <label class="tk-opt">โหมด:
+            <select id="tk-mode">
+              <option value="floating">ลอย</option>
+              <option value="inline">ฝัง</option>
+            </select>
+          </label>
+        </div>
+        <div class="tk-btnrow">
+          <button class="tk-btn tk-primary" id="tk-recount" title="นับใหม่ทั้งแชท แล้วเทียบกับค่าที่บันทึกไว้">↻ Recount</button>
+          <button class="tk-btn" id="tk-ckpt" title="บันทึก Checkpoint พร้อมชื่อและเวลา">💾 Checkpoint</button>
+        </div>
+        <div class="tk-btnrow">
+          <button class="tk-btn" id="tk-ckpt-list" title="ดูรายการ Checkpoint">📋 Checkpoints</button>
+          <button class="tk-btn" id="tk-copy" title="คัดลอกรายงาน">📄 Copy</button>
+        </div>
+        <div class="tk-row tk-syncrow" style="justify-content:space-between;">
+          <span class="tk-opt" id="tk-sync-label" style="cursor:default;">📁 Sync: 🟢 2026-10-12_18-28 ตรวจสอบระบบ ภาษาไทย OK.json</span>
+          <button class="tk-btn" id="tk-sync-setup" style="flex:0 0 auto;">ตั้งค่าโฟลเดอร์</button>
+        </div>
+      </div></div>
+  </div>
+  <div class="pv-col">
+    <div class="pv-title">2) Floating COLLAPSED (mini)</div>
+    <div id="tokencal-panel" class="collapsed">
+      <div class="tk-header" id="tk-drag">
+        <div class="tk-title"><span>📊 TokenCal</span><span class="tk-chatname" id="tk-chat-title">ทดสอบชื่อแชทยาวมากๆ ระบบตรวจสอบโทเคน เวอร์ชันล่าสุด Long Chat Title Test</span></div>
+        <span class="tk-mini-stats" id="tk-mini-stats"><span class="tk-in-num">In 1,105,579</span> · <span class="tk-out-dot"></span><span class="tk-out-num">Out 977,123</span> · <span class="tk-total-num">Σ 2,082,702</span> · <span class="tk-turns-num">342 turns</span></span>
+        <div>
+          <button class="tk-icon" id="tk-btn-collapse" title="ย่อ/ขยาย">▼</button>
+          <button class="tk-icon" id="tk-btn-hide" title="ซ่อน (Ctrl+Shift+F)">✕</button>
+        </div>
+      </div>
+      <div class="tk-body">
+        <div class="tk-status" id="tk-status">อัปเดตแล้ว (API)</div>
+        <div class="tk-grid">
+          <div class="tk-cell"><div class="tk-label">Input</div><div class="tk-val tk-in" id="tk-in">1,105,579</div></div>
+          <div class="tk-cell"><div class="tk-label">Output</div><div class="tk-val tk-out" id="tk-out">977,123</div></div>
+          <div class="tk-cell"><div class="tk-label">Total</div><div class="tk-val tk-total" id="tk-total">2,082,702</div></div>
+          <div class="tk-cell"><div class="tk-label">Messages</div><div class="tk-val" id="tk-msgs">342</div></div>
+        </div>
+        <div class="tk-meta" id="tk-meta">Model: claude-sonnet-4-6 · Tokenizer: v3.0 · ที่มา: API · อัปเดต: 12/10/2026 18:45:12</div>
+        <div class="tk-row">
+          <label class="tk-opt">Tok:
+            <select id="tk-gen">
+              <option value="auto">Auto</option>
+              <option value="3.0">v3 (≤4.6)</option>
+              <option value="4.7">v4.7 (Opus 4.7)</option>
+              <option value="4.8">v4.8 (4.8+/Sonnet 5)</option>
+            </select>
+          </label>
+          <label class="tk-opt"><input type="checkbox" id="tk-think"> thinking/tool</label>
+          <label class="tk-opt"><input type="checkbox" id="tk-auto"> Auto</label>
+          <label class="tk-opt">โหมด:
+            <select id="tk-mode">
+              <option value="floating">ลอย</option>
+              <option value="inline">ฝัง</option>
+            </select>
+          </label>
+        </div>
+        <div class="tk-btnrow">
+          <button class="tk-btn tk-primary" id="tk-recount" title="นับใหม่ทั้งแชท แล้วเทียบกับค่าที่บันทึกไว้">↻ Recount</button>
+          <button class="tk-btn" id="tk-ckpt" title="บันทึก Checkpoint พร้อมชื่อและเวลา">💾 Checkpoint</button>
+        </div>
+        <div class="tk-btnrow">
+          <button class="tk-btn" id="tk-ckpt-list" title="ดูรายการ Checkpoint">📋 Checkpoints</button>
+          <button class="tk-btn" id="tk-copy" title="คัดลอกรายงาน">📄 Copy</button>
+        </div>
+        <div class="tk-row tk-syncrow" style="justify-content:space-between;">
+          <span class="tk-opt" id="tk-sync-label" style="cursor:default;">📁 Sync: 🟢 2026-10-12_18-28 ตรวจสอบระบบ ภาษาไทย OK.json</span>
+          <button class="tk-btn" id="tk-sync-setup" style="flex:0 0 auto;">ตั้งค่าโฟลเดอร์</button>
+        </div>
+      </div></div>
+  </div>
+  <div class="pv-col">
+    <div class="pv-title">3) Floating EXPANDED — extreme unbroken title</div>
+    <div id="tokencal-panel">
+      <div class="tk-header" id="tk-drag">
+        <div class="tk-title"><span>📊 TokenCal</span><span class="tk-chatname" id="tk-chat-title">ไม่มีเว้นวรรคABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz_ตัวอักษรติดกันยาวๆไม่มีที่ตัด</span></div>
+        <span class="tk-mini-stats" id="tk-mini-stats"><span class="tk-in-num">In 1,105,579</span> · <span class="tk-out-dot"></span><span class="tk-out-num">Out 977,123</span> · <span class="tk-total-num">Σ 2,082,702</span> · <span class="tk-turns-num">342 turns</span></span>
+        <div>
+          <button class="tk-icon" id="tk-btn-collapse" title="ย่อ/ขยาย">▼</button>
+          <button class="tk-icon" id="tk-btn-hide" title="ซ่อน (Ctrl+Shift+F)">✕</button>
+        </div>
+      </div>
+      <div class="tk-body">
+        <div class="tk-status" id="tk-status">อัปเดตแล้ว (API)</div>
+        <div class="tk-grid">
+          <div class="tk-cell"><div class="tk-label">Input</div><div class="tk-val tk-in" id="tk-in">1,105,579</div></div>
+          <div class="tk-cell"><div class="tk-label">Output</div><div class="tk-val tk-out" id="tk-out">977,123</div></div>
+          <div class="tk-cell"><div class="tk-label">Total</div><div class="tk-val tk-total" id="tk-total">2,082,702</div></div>
+          <div class="tk-cell"><div class="tk-label">Messages</div><div class="tk-val" id="tk-msgs">342</div></div>
+        </div>
+        <div class="tk-meta" id="tk-meta">Model: claude-sonnet-4-6 · Tokenizer: v3.0 · ที่มา: API · อัปเดต: 12/10/2026 18:45:12</div>
+        <div class="tk-row">
+          <label class="tk-opt">Tok:
+            <select id="tk-gen">
+              <option value="auto">Auto</option>
+              <option value="3.0">v3 (≤4.6)</option>
+              <option value="4.7">v4.7 (Opus 4.7)</option>
+              <option value="4.8">v4.8 (4.8+/Sonnet 5)</option>
+            </select>
+          </label>
+          <label class="tk-opt"><input type="checkbox" id="tk-think"> thinking/tool</label>
+          <label class="tk-opt"><input type="checkbox" id="tk-auto"> Auto</label>
+          <label class="tk-opt">โหมด:
+            <select id="tk-mode">
+              <option value="floating">ลอย</option>
+              <option value="inline">ฝัง</option>
+            </select>
+          </label>
+        </div>
+        <div class="tk-btnrow">
+          <button class="tk-btn tk-primary" id="tk-recount" title="นับใหม่ทั้งแชท แล้วเทียบกับค่าที่บันทึกไว้">↻ Recount</button>
+          <button class="tk-btn" id="tk-ckpt" title="บันทึก Checkpoint พร้อมชื่อและเวลา">💾 Checkpoint</button>
+        </div>
+        <div class="tk-btnrow">
+          <button class="tk-btn" id="tk-ckpt-list" title="ดูรายการ Checkpoint">📋 Checkpoints</button>
+          <button class="tk-btn" id="tk-copy" title="คัดลอกรายงาน">📄 Copy</button>
+        </div>
+        <div class="tk-row tk-syncrow" style="justify-content:space-between;">
+          <span class="tk-opt" id="tk-sync-label" style="cursor:default;">📁 Sync: 🟢 2026-10-12_18-28 ตรวจสอบระบบ ภาษาไทย OK.json</span>
+          <button class="tk-btn" id="tk-sync-setup" style="flex:0 0 auto;">ตั้งค่าโฟลเดอร์</button>
+        </div>
+      </div></div>
+  </div>
+  <div class="pv-col">
+    <div class="pv-title">4) Inline EXPANDED (embedded in composer)</div>
+    <div class="pv-composer">
+      <div id="tokencal-panel" class="tk-embedded">
+      <div class="tk-header" id="tk-drag">
+        <div class="tk-title"><span>📊 TokenCal</span><span class="tk-chatname" id="tk-chat-title">ทดสอบชื่อแชทยาวมากๆ ระบบตรวจสอบโทเคน เวอร์ชันล่าสุด Long Chat Title Test</span></div>
+        <span class="tk-mini-stats" id="tk-mini-stats"><span class="tk-in-num">In 1,105,579</span> · <span class="tk-out-dot"></span><span class="tk-out-num">Out 977,123</span> · <span class="tk-total-num">Σ 2,082,702</span> · <span class="tk-turns-num">342 turns</span></span>
+        <div>
+          <button class="tk-icon" id="tk-btn-collapse" title="ย่อ/ขยาย">▼</button>
+          <button class="tk-icon" id="tk-btn-hide" title="ซ่อน (Ctrl+Shift+F)">✕</button>
+        </div>
+      </div>
+      <div class="tk-body">
+        <div class="tk-status" id="tk-status">อัปเดตแล้ว (API)</div>
+        <div class="tk-grid">
+          <div class="tk-cell"><div class="tk-label">Input</div><div class="tk-val tk-in" id="tk-in">1,105,579</div></div>
+          <div class="tk-cell"><div class="tk-label">Output</div><div class="tk-val tk-out" id="tk-out">977,123</div></div>
+          <div class="tk-cell"><div class="tk-label">Total</div><div class="tk-val tk-total" id="tk-total">2,082,702</div></div>
+          <div class="tk-cell"><div class="tk-label">Messages</div><div class="tk-val" id="tk-msgs">342</div></div>
+        </div>
+        <div class="tk-meta" id="tk-meta">Model: claude-sonnet-4-6 · Tokenizer: v3.0 · ที่มา: API · อัปเดต: 12/10/2026 18:45:12</div>
+        <div class="tk-row">
+          <label class="tk-opt">Tok:
+            <select id="tk-gen">
+              <option value="auto">Auto</option>
+              <option value="3.0">v3 (≤4.6)</option>
+              <option value="4.7">v4.7 (Opus 4.7)</option>
+              <option value="4.8">v4.8 (4.8+/Sonnet 5)</option>
+            </select>
+          </label>
+          <label class="tk-opt"><input type="checkbox" id="tk-think"> thinking/tool</label>
+          <label class="tk-opt"><input type="checkbox" id="tk-auto"> Auto</label>
+          <label class="tk-opt">โหมด:
+            <select id="tk-mode">
+              <option value="floating">ลอย</option>
+              <option value="inline">ฝัง</option>
+            </select>
+          </label>
+        </div>
+        <div class="tk-btnrow">
+          <button class="tk-btn tk-primary" id="tk-recount" title="นับใหม่ทั้งแชท แล้วเทียบกับค่าที่บันทึกไว้">↻ Recount</button>
+          <button class="tk-btn" id="tk-ckpt" title="บันทึก Checkpoint พร้อมชื่อและเวลา">💾 Checkpoint</button>
+        </div>
+        <div class="tk-btnrow">
+          <button class="tk-btn" id="tk-ckpt-list" title="ดูรายการ Checkpoint">📋 Checkpoints</button>
+          <button class="tk-btn" id="tk-copy" title="คัดลอกรายงาน">📄 Copy</button>
+        </div>
+        <div class="tk-row tk-syncrow" style="justify-content:space-between;">
+          <span class="tk-opt" id="tk-sync-label" style="cursor:default;">📁 Sync: 🟢 2026-10-12_18-28 ตรวจสอบระบบ ภาษาไทย OK.json</span>
+          <button class="tk-btn" id="tk-sync-setup" style="flex:0 0 auto;">ตั้งค่าโฟลเดอร์</button>
+        </div>
+      </div></div>
+      <div class="pv-inputmock">พิมพ์ข้อความ… (mock prompt)</div>
+    </div>
+  </div>
+  <div class="pv-col">
+    <div class="pv-title">5) Inline COLLAPSED (strip)</div>
+    <div class="pv-composer">
+      <div id="tk-strip" title="TokenCal"><span class="tk-strip-dot online" data-role="dot"></span><span class="tk-in-num">In <span class="tk-strip-num" data-role="in">1,105,579</span></span><span class="tk-strip-sep">·</span><span class="tk-strip-out"><span class="tk-out-dot"></span><span class="tk-out-num" data-role="out">Out 977,123</span></span><span class="tk-strip-sep">·</span><span class="tk-total-num" data-role="total">Σ 2,082,702</span><span class="tk-strip-sep">·</span><span class="tk-turns-num" data-role="turns">342 turns</span><span class="tk-strip-expand">▲</span></div>
+      <div class="pv-inputmock">พิมพ์ข้อความ… (mock prompt)</div>
+    </div>
+  </div>
+</div>
+</body></html>
